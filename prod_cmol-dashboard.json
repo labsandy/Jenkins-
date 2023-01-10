@@ -1,0 +1,25 @@
+pipeline{
+   agent any
+   stages{
+      stage('Checkout'){
+          steps{
+               sh 'cd /home/jenkins/projects/creditmantri-offers && git checkout master && git pull origin master && git checkout -b Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER && git push origin Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER'
+         }
+      }
+      stage('Deployment'){
+          parallel{
+              stage('Prelogin-offers'){
+                  steps{
+                    sh'ssh -i "/home/jenkins/pem/cmol-preprod.pem" ubuntu@172.31.48.58 "cd /home/ubuntu/creditmantri-offers && sudo git fetch origin Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER && git checkout Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER && git pull origin Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER && pm2 reload all && pm2 status all "'
+                  }
+              }
+              stage('Prelogin-offers1'){
+                  steps{
+                    sh'ssh -i "/home/jenkins/pem/cmol-preprod.pem" ubuntu@172.31.49.8 "cd /home/ubuntu/creditmantri-offers && sudo git fetch origin Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER && git checkout Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER && git pull origin Release-$(date +"%Y-%m-%d")-$BUILD_NUMBER && pm2 reload all && pm2 status all "'
+                  }
+              }
+              
+          }
+      }
+   }
+}
