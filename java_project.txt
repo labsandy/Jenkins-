@@ -1,0 +1,31 @@
+pipeline{
+   agent any
+   stages{
+      
+      stage('checkout'){
+          steps{
+              sh 'cd /home/jenkins/microservice-prod/zaggle && git pull origin master'
+              }
+          }
+      stage('Maven_Test'){
+          steps{
+              sh 'cd /home/jenkins/microservice-prod/zaggle && mvn clean test -Dspring.profiles.active=prod -Dapp.env=prod -Dapp.registry=980326058463.dkr.ecr.ap-south-1.amazonaws.com/creditmantri-dockerregistry'
+              }
+          }    
+      stage('AWS-Token-Refresh'){
+          steps{
+              sh '/home/jenkins/microservice-prod/AWS-Token-Refresh.sh'
+              }
+          }
+      stage('Image-Build'){
+          steps{
+              sh 'cd /home/jenkins/microservice-prod/zaggle && mvn clean -DskipTests -Dspring.profiles.active=prod -Dapp.env=prod -Dapp.registry=980326058463.dkr.ecr.ap-south-1.amazonaws.com/creditmantri-dockerregistry deploy'
+              }
+          }
+      stage('Deploy'){
+          steps{
+             sh 'ssh -o "stricthostkeychecking no" -i "/home/jenkins/pem/cgprod.pem" ubuntu@172.31.48.174 "sudo bash /home/ubuntu/aws_refresh.sh && sudo docker pull 980326058463.dkr.ecr.ap-south-1.amazonaws.com/creditmantri-dockerregistry:cmolpass2-0.0.1-SNAPSHOT-latest && sudo docker stop pass2 && sudo docker rm pass2 && sudo docker run -d -p 9090:9090 -e "SPRING_PROFILES_ACTIVE=prod" --name pass2 980326058463.dkr.ecr.ap-south-1.amazonaws.com/creditmantri-dockerregistry:cmolpass2-0.0.1-SNAPSHOT-latest && sudo docker update pass2 --restart=always && sudo docker ps | grep pass2 "'              }
+          }    
+   }
+
+}
